@@ -5,8 +5,8 @@ import os
 import sys
 
 # Set log level to environment variable LOGLEVEL
-# or default to INFO
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+# or default to ERROR
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
 
 # Setup connection parameters
 host='127.0.0.1'
