@@ -31,6 +31,8 @@ except socket.error:
     sys.exit()
 
 serv.listen(5)
+logging.info("Listening")
+
 
 #Keeps track of players currently in the server
 players=[]
@@ -41,14 +43,25 @@ while True:
     while True:
         data = conn.recv(4096).decode()
         logging.info("Received data: %s", data)
+
         if not data:
+            logging.info("Empty message received")
             break
 
         data = json.loads(data)
-        player = data["new_player"]
-        players.append(player)
-        logging.info("New player %s added", player)
-        server_response = "Welcome to the game " + player
-        conn.send(server_response.encode())
+        # Add a new player
+        if "new_player" in data.keys():
+            logging.info("Current players: %s", players)
+            logging.info(" len(players): %s", len(players))
+            player = data["new_player"]
+            if len(players) < 2:
+                players.append(player)
+                logging.info("New player %s added", player)
+                server_response = "Welcome to the game " + player
+                conn.send(server_response.encode())
+            else:
+                server_response = "Sorry, we already have two players " + player
+                conn.send(server_response.encode())
+
     conn.close()
     print('client disconnected')
