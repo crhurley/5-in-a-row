@@ -51,56 +51,60 @@ class Client():
         print(from_server)
 
         # Exit if we already have two players
-        if "400 FULL" in from_server:
+        if from_server == "400 FULL":
             print("Sorry %s, we already have two players " % (self.username))
             print("Exiting")
             self.server_socket.close()
             sys.exit()
 
     def play_game(self):
-        #Initial response
-        response="WAIT"
-
         """Client loop. Always either waiting for further instructions and not taking user input
         or taking user input and returning server response"""
         while True:
+            self.response=json.loads(self.server_socket.recv(4096).decode())
+            logging.info("Start of client loop. Response from server %s: ", self.response)
 
-            while "WAIT" in response:
-                response=json.loads(self.server_socket.recv(4096).decode())
-                logging.info("Response from server %s: ", response)
+            # Wait for second player to join
+            while self.response["status"] == "200 WAIT_PLAYER":
+                print("We are waiting for one more player")
+                self.response=json.loads(self.server_socket.recv(4096).decode())
 
+            # Wait for your first turn
+            if self.response["status"] == "200 WAIT_TURN":
+                print("Please wait for your opponent's turn")
 
-                # Wait for second player
-                while response["status"] == "200 WAIT":
-                    response=json.loads(self.server_socket.recv(4096).decode())
-                    print("We are waiting for one more player")
+            if self.response["status"] == "200 READY":
+                logging.info("Taking turn")
+                self.make_move()
 
-                while response["status"] == "200 READY":
-                    logging.info("Game started")
-                    #Take user input from command line interface
-                    user_input=input("5row->")
-                    if(user_input==''):
-                        continue
+                # Wait for your turn
+                if self.response["status"] == "200 WAIT_TURN":
+                    print("Please wait for your opponent's turn")
 
-                    #Send user input to server, and collect response
-                    client_message = json.dumps({"current_player": self.username, "next_move": user_input})
-                    self.server_socket.send(client_message.encode())
-                    response=json.loads(self.server_socket.recv(4096).decode())
-                    logging.info("Response from server %s: ", response)
+    def make_move(self):
+        input_validated = False
+        # Keep prompting until the server accepts the input
+        while not input_validated:
+            #Take user input from command line interface
+            user_input=input("5row->")
 
-                    #Exit loop and quit program if user chooses to exit
-                    if response["status"] == "200 DISC":
-                        self.server_socket.close()
-                        sys.exit()
+            #Send user input to server, and collect response
+            client_message = json.dumps({"current_player": self.username, "next_move": user_input})
+            self.server_socket.send(client_message.encode())
+            self.response=json.loads(self.server_socket.recv(4096).decode())
+            logging.info("After move, response from server %s: ", self.response)
 
-                    #Error handling
-                    elif response["status"]=="400 ERR":
-                        print("Invalid command, please try again")
-                        response["status"]="200 READY"
+            # Close socket and quit if user chooses to exit
+            if self.response["status"] == "200 DISC":
+                self.server_socket.close()
+                sys.exit()
 
-                #If response is valid, print it
-                else:
-                    print(response)
+            #Error handling
+            if self.response["status"]=="400 ERR":
+                print("Invalid command, please try again")
+                input_validated = False
+            else:
+                input_validated = True
 
     def exit(self):
         try:
@@ -110,8 +114,10 @@ class Client():
 
             # Make sure to close the socket when we're done
             self.server_socket.close()
+            sys.exit()
         except:
             logging.info("Socket already closed")
+            sys.exit()
 
     def run(self):
         try:
@@ -126,7 +132,6 @@ class Client():
         except KeyboardInterrupt:
             logging.info("KeyboardInterrupt received, exiting")
             self.exit()
-            sys.exit()
 
 
 if __name__ == "__main__":

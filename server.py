@@ -13,8 +13,16 @@ class Server():
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
 
     def __init__(self, players=[]):
-        #Keep track of players currently in the game
+        # Keep track of players currently in the game
         self.players = players
+        # Keep track of connections
+        self.connections = {}
+        # Keep track of who's turn it is
+        self.turn = ""
+        self.waiting = ""
+        # Keep track of whether we've started the game
+        # So that we don't try start it multiple times
+        self.game_started = False
         # Lock for threads
         self.lock=RLock()
 
@@ -49,7 +57,7 @@ class Server():
         """Run for each client that connects to the server
         Handles messages sent from the client and sends corresponding responses"""
 
-        # Main connection loop. Handles all messages from
+        # Main connection loop. Handles all messages from client
         while True:
             try:
                 cmd = client_connection.recv(4096).decode()
@@ -62,6 +70,7 @@ class Server():
                 cmd = json.loads(cmd)
                 client_response = ""
 
+                # Keep track of who is currently playing
                 if "current_player" in cmd.keys():
                     self.current_player = cmd["current_player"]
 
@@ -71,13 +80,26 @@ class Server():
                     if self.add_player(cmd["new_player"]):
                         client_response = "Welcome to the game %s!" % (self.current_player)
                         client_connection.send(client_response.encode())
+
+                        # Add new player's connection to the list
+                        self.lock.acquire()
+                        self.connections[self.current_player] = client_connection
+                        self.lock.release()
+
+                        # Waiting for second player
                         while len(self.players) == 1:
-                            client_response = json.dumps({"status": "200 WAIT"})
+                            client_response = json.dumps({"status": "200 WAIT_PLAYER"})
                             client_connection.send(client_response.encode())
                             time.sleep(2)
-                        if len(self.players) == 2:
-                            client_response = json.dumps({"status": "200 READY"})
-                            client_connection.send(client_response.encode())
+
+                        # Second player has arrived we can start the game
+                        if len(self.players) == 2 and not self.game_started:
+                            # The first player to connect gets the first turn
+                            self.turn = self.players[0]
+                            self.waiting = self.players[1]
+                            logging.info("Starting game: %s goes first: ", self.turn)
+                            self.prompt_players()
+                            self.game_started = True
                     else:
                         client_response = json.dumps({"status": "400 FULL"})
                         client_connection.send(client_response.encode())
@@ -89,18 +111,17 @@ class Server():
                     # Valid move
                     if move.isdigit() and len(move) == 1:
                         logging.info("Valid move %s: ", move)
-                        client_response = json.dumps({"status": "200 READY"})
-                        client_connection.send(client_response.encode())
+                        self.prompt_players()
 
                     # User wants to exit
                     elif move == "exit":
                         logging.info("self.current_player, self.players: %s %s", self.current_player, self.players)
                         self.lock.acquire()
                         self.players.remove(self.current_player)
+                        self.lock.release()
                         client_response = json.dumps({"status": "200 DISC"})
                         client_connection.send(client_response.encode())
                         client_connection.close()
-                        self.lock.release()
                         logging.info("Client %s disconnected", self.current_player)
                         break
 
@@ -120,14 +141,30 @@ class Server():
         if len(self.players) < 2:
             self.lock.acquire()
             self.players.append(player)
+            self.lock.release()
             logging.info("New player %s added", player)
             logging.info("Current players: %s", self.players)
-            self.lock.release()
             return True
         else:
             return False
 
+    def prompt_players(self):
+        """Prompts players for move and automatically switches turn"""
+        logging.info("It's: %s's turn. %s is waiting", self.turn, self.waiting)
 
+        # Tell each player it's their go or else to wait
+        ready_response = json.dumps({"status": "200 READY", "turn": self.turn})
+        self.connections[self.turn].send(ready_response.encode())
+        wait_response = json.dumps({"status": "200 WAIT_TURN"})
+        self.connections[self.waiting].send(wait_response.encode())
+
+        # Switch turn
+        if self.turn==self.players[0]:
+            self.turn=self.players[1]
+            self.waiting=self.players[0]
+        else:
+            self.turn=self.players[0]
+            self.waiting=self.players[1]
 
     def run(self):
         self.setup_connection()
