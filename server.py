@@ -12,28 +12,28 @@ class Server():
     # or default to ERROR
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
 
-    def __init__(self, players=[]):
-        self.reset_server(players)
+    def __init__(self, kwargs={}):
+        self.reset_server(kwargs)
 
-    def reset_server(self, players=[]):
+    def reset_server(self, kwargs={}):
         # Keep track of players currently in the game
-        self.players = players
+        self.players = kwargs.get("players", [])
         # Keep track of connections
-        self.connections = {}
+        self.connections = kwargs.get("connections", {})
         # Lock for threads
         self.lock=RLock()
         # Keep track of who's turn it is
-        self.turn = ""
-        self.waiting = ""
-        self.markers = {}
+        self.turn = kwargs.get("turn", "")
+        self.waiting = kwargs.get("waiting", "")
+        self.markers = kwargs.get("markers", {})
         # Keep track of whether we've started the game
         # So that we don't try start it multiple times
-        self.game_started = False
+        self.game_started = kwargs.get("game_started", False)
         # Board size
-        self.boardheight = 5
-        self.boardwidth = 5
+        self.boardheight = kwargs.get("boardheight", 6)
+        self.boardwidth = kwargs.get("boardwidth", 9)
         # Board state
-        self.board =[]
+        self.board = kwargs.get("board", [])
         # Check if column is full
         self.column_full = False
 
@@ -339,6 +339,7 @@ class Server():
         if "[ ]" not in self.board[0]:
             if not self.check_winner():
                 return True
+        return False
 
     def disconnect_clients(self):
         logging.info("Disconnecting all players")

@@ -71,7 +71,7 @@ class Client():
 
         # Exit if we already have two players
         elif user_response["status"] == "400 FULL":
-            print("Sorry %s, we already have two players " % (self.username))
+            print(f"Sorry {self.username}, we already have two players")
             print("Exiting")
             self.server_socket.close()
             sys.exit()
@@ -82,7 +82,7 @@ class Client():
         user input and returning server response"""
         while True:
             self.response=json.loads(self.server_socket.recv(4096).decode())
-            logging.info(
+            logging.debug(
                 "Start of client loop. Response from server %s: ",
                 self.response
             )
@@ -130,7 +130,7 @@ class Client():
             self.response=json.loads(
                 self.server_socket.recv(4096).decode()
             )
-            logging.info(
+            logging.debug(
                 "After move, response from server %s: ",
                 self.response
             )
