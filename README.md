@@ -4,7 +4,9 @@ Connect 5 game that supports client server interactions
 
 ## How to Run
 
-All commands listed below should be run in the root of the project directory (this folder)
+All commands listed below should be run in the root of the project directory (this folder).
+
+If you would lke to enable logging set the LOGLEVEL environment variable.
 
 ### Run the server
 
@@ -13,8 +15,6 @@ Simply run:
 python server.py
 ```
 to start the server. This will set up the server and start listening on 127.0.0.1:1337 for client connections
-
-If you would lke to enable logging set the LOGLEVEL environment variable.
 
 ### Run the client
 
@@ -35,3 +35,7 @@ To make sure you have all dependencies installed. Then run:
 python -m pytest
 ```
 To run the tests. pytest will detext and run all tests in the project.
+
+## Example Screenshot
+
+![alt text](https://github.com/crhurley/5-in-a-row/blob/master/images/img1.png?raw=true)
