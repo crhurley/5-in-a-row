@@ -38,4 +38,4 @@ To run the tests. pytest will detext and run all tests in the project.
 
 ## Example Screenshot
 
-![img3](https://github.com/crhurley/5-in-a-row/blob/master/images/img1.png)
+![img1](https://github.com/crhurley/5-in-a-row/blob/master/images/img1.png)
